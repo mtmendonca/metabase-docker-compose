@@ -1,0 +1,68 @@
+---
+- name: Update all packages
+  yum:
+    name: '*'
+    state: latest
+    update_cache: yes
+
+- name: Make sure pip is installed
+  yum:
+    name: 'python27-pip'
+    state: present
+
+- name: Get latest aws cli
+  pip:
+    name: 'awscli'
+    state: latest
+
+- name: Get rid of default java
+  yum:
+    name: 'java-1.7.0-openjdk'
+    state: absent
+
+- name: Install packages
+  yum:
+    name: '{{ item }}'
+    state: present
+  loop:
+    - java-1.8.0
+    - git
+    - unzip
+    - zip
+    - docker
+
+- name: Enable and start docker
+  service:
+    name: docker
+    enabled: yes
+    state: restarted
+
+- name: Add ec2-user to docker group
+  user:
+    append: yes
+    groups: docker
+    name: ec2-user
+    state: present
+
+- name: Download docker-compose
+  get_url:
+    url: https://github.com/docker/compose/releases/download/{{ metabase.docker_compose_version }}/docker-compose-Linux-x86_64
+    dest: /usr/local/bin/docker-compose
+
+- name: Add docker-compose permissions
+  file:
+    path: /usr/local/bin/docker-compose
+    mode: a+x
+
+- name: Create metabase directory
+  file:
+    path: /home/metabase
+    state: directory
+    owner: ec2-user
+    group: ec2-user
+
+- name: Clone metabase-docker-compose
+  git:
+    repo: "{{ metabase.metabase_docker_compose_repo }}"
+    dest: /home/metabase
+  become_user: ec2-user

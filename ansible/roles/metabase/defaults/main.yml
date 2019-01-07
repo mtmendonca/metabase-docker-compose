@@ -1,0 +1,4 @@
+---
+metabase:
+  docker_compose_version: '1.23.2'
+  metabase_docker_compose_repo: 'https://github.com/mtmendonca/metabase-docker-compose'

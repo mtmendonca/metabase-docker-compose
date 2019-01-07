@@ -1,0 +1,6 @@
+---
+- name: Metabase Docker Compose
+  hosts: metabase-docker-compose
+  become: yes
+  roles:
+    - metabase
