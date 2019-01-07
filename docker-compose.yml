@@ -1,0 +1,28 @@
+version: '2.4'
+services:
+  postgres:
+    image: postgres:10
+    mem_limit: 512mb
+    restart: always
+    ports:
+      - ${POSTGRES_EXPORT_PORT}:5432
+    environment:
+      POSTGRES_PASSWORD:
+      POSTGRES_DB:
+    volumes:
+      - ./pg-data:/var/lib/postgresql/data
+  metabase:
+    depends_on:
+      - postgres
+    image: metabase/metabase:v0.31.2
+    restart: always
+    mem_limit: 512mb
+    ports:
+      - 3000:3000
+    environment:
+      MB_DB_TYPE:
+      MB_DB_DBNAME:
+      MB_DB_PORT:
+      MB_DB_USER:
+      MB_DB_PASS:
+      MB_DB_HOST:

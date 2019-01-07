@@ -1,0 +1,5 @@
+**/.env
+**/.packer.env
+**/.cloudformation.env
+**/packaged-template.yaml
+pg-data
