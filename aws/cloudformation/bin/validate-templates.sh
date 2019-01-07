@@ -1,5 +1,5 @@
 #!/bin/bash
-pushd $(dirname $0)/../${1} >/dev/null
+pushd $(dirname $0)/../ >/dev/null
 
 ERROR_COUNT=0;
 
