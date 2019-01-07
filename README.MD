@@ -24,7 +24,7 @@ $ ./start.sh
 
 This template creates a folder named `pg-data` in the root level of the project. You may back that up if you wish.
 
-### Creating an AWS AMI with Ansible
+## Creating an AWS AMI with Ansible
 tba
 
 ## Creating an Auto Scaling Group with AWS Cloudformation
