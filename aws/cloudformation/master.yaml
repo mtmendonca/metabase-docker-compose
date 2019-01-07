@@ -1,0 +1,245 @@
+Description: >
+  This template deploys an Auto Scaling Group to a VPC
+
+Parameters:
+  EnvironmentName:
+    Description: An environment name that will be prefixed to resource names
+    Type: String
+  VPC:
+    Description: Choose which VPC this ASG should be deployed to
+    Type: AWS::EC2::VPC::Id
+  KeyName:
+    Description: Which AWS Key do you want to assign to the instances in this ASG?
+    Type: String
+  AMI:
+    Description: Choose an AMI for this ASG
+    Type: String
+  InstanceType:
+    Description: Which instance type should we use to build the ASG?
+    Type: String
+  ClusterSize:
+    Description: How many ECS hosts do you want to initially deploy?
+    Type: Number
+  Subnets:
+    Description: Choose which subnets this ASG should be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: !Sub ${EnvironmentName} security group
+      SecurityGroupIngress:
+        - Description: Access from the Internet
+          CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+      SecurityGroupEgress:
+        - Description: Outbound anywhere
+          CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: !Ref Subnets
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MinSize: !Ref ClusterSize
+      MaxSize: !Ref ClusterSize
+      DesiredCapacity: !Ref ClusterSize
+      Tags:
+        - Key: Name
+          Value: !Sub ${EnvironmentName} ASG
+          PropagateAtLaunch: true
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        SuspendProcesses:
+          - HealthCheck
+          - ReplaceUnhealthy
+          - AZRebalance
+          - AlarmNotification
+          - ScheduledActions
+        WaitOnResourceSignals: true
+
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      KeyName: !Ref KeyName
+      ImageId: !Ref AMI
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - !Ref SecurityGroup
+      IamInstanceProfile: !Ref InstanceProfile
+      UserData:
+        'Fn::Base64': !Sub |
+          #!/bin/bash
+          yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+          yum install -y aws-cfn-bootstrap hibagent
+          /opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
+          /opt/aws/bin/cfn-signal -e $? --region ${AWS::Region} --stack ${AWS::StackName} --resource AutoScalingGroup
+          /usr/bin/enable-ec2-spot-hibernation
+
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              awslogs: []
+
+          commands:
+            01_start_docker_compose:
+              cwd: /home/metabase
+              command: git pull && git checkout master && ./start.sh -d
+              env:
+                MB_DB_TYPE: postgres
+                MB_DB_DBNAME: metabase
+                MB_DB_PORT: 5432
+                MB_DB_USER: postgres
+                MB_DB_PASS: 123456
+                MB_DB_HOST: postgres
+                POSTGRES_PASSWORD: 123456
+                POSTGRES_DB: metabase
+          files:
+            '/etc/cfn/cfn-hup.conf':
+              mode: 000400
+              owner: root
+              group: root
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+
+            '/etc/cfn/hooks.d/cfn-auto-reloader.conf':
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.LaunchConfiguration.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --region ${AWS::Region} --stack ${AWS::StackName} --resource LaunchConfiguration
+
+            '/etc/awslogs/awscli.conf':
+              content: !Sub |
+                [plugins]
+                cwlogs = cwlogs
+                [default]
+                region = ${AWS::Region}
+
+            '/etc/awslogs/awslogs.conf':
+              content: !Sub |
+                [general]
+                state_file = /var/lib/awslogs/agent-state
+
+                [/var/log/dmesg]
+                file = /var/log/dmesg
+                log_group_name = ${EnvironmentName}-/var/log/dmesg
+                log_stream_name = ${EnvironmentName}
+
+                [/var/log/messages]
+                file = /var/log/messages
+                log_group_name = ${EnvironmentName}-/var/log/messages
+                log_stream_name = ${EnvironmentName}
+                datetime_format = %b %d %H:%M:%S
+
+                [/var/log/docker]
+                file = /var/log/docker
+                log_group_name = ${EnvironmentName}-/var/log/docker
+                log_stream_name = ${EnvironmentName}
+                datetime_format = %Y-%m-%dT%H:%M:%S.%f
+
+          services:
+            sysvinit:
+              cfn-hup:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+              awslogs:
+                enabled: true
+                ensureRunning: true
+                files:
+                  - /etc/awslogs/awslogs.conf
+                  - /etc/awslogs/awscli.conf
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: !Sub ${EnvironmentName}-ASGRole-${AWS::Region}
+      AssumeRolePolicyDocument: |
+        {
+            "Statement": [{
+                "Action": "sts:AssumeRole",
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "ec2.amazonaws.com"
+                }
+            }]
+        }
+      Policies:
+        - PolicyName: asg-service
+          PolicyDocument: |
+            {
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Action": [
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents",
+                        "ecr:BatchCheckLayerAvailability",
+                        "ecr:BatchGetImage",
+                        "ecr:GetDownloadUrlForLayer",
+                        "ecr:GetAuthorizationToken",
+                        "ssm:DescribeAssociation",
+                        "ssm:GetDeployablePatchSnapshotForInstance",
+                        "ssm:GetDocument",
+                        "ssm:GetManifest",
+                        "ssm:GetParameters",
+                        "ssm:ListAssociations",
+                        "ssm:ListInstanceAssociations",
+                        "ssm:PutInventory",
+                        "ssm:PutComplianceItems",
+                        "ssm:PutConfigurePackageResult",
+                        "ssm:UpdateAssociationStatus",
+                        "ssm:UpdateInstanceAssociationStatus",
+                        "ssm:UpdateInstanceInformation",
+                        "ec2messages:AcknowledgeMessage",
+                        "ec2messages:DeleteMessage",
+                        "ec2messages:FailMessage",
+                        "ec2messages:GetEndpoint",
+                        "ec2messages:GetMessages",
+                        "ec2messages:SendReply",
+                        "cloudwatch:PutMetricData",
+                        "ec2:DescribeInstanceStatus",
+                        "ds:CreateComputer",
+                        "ds:DescribeDirectories",
+                        "logs:CreateLogGroup",
+                        "logs:CreateLogStream",
+                        "logs:DescribeLogGroups",
+                        "logs:DescribeLogStreams",
+                        "logs:PutLogEvents",
+                        "s3:PutObject",
+                        "s3:GetObject",
+                        "s3:AbortMultipartUpload",
+                        "s3:ListMultipartUploadParts",
+                        "s3:ListBucket",
+                        "s3:ListBucketMultipartUploads",
+                        "ses:SendEmail",
+                        "ses:SendRawEmail",
+                        "ses:SendTemplatedEmail"
+                    ],
+                    "Resource": "*"
+                }]
+            }
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref Role
