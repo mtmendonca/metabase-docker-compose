@@ -4,8 +4,6 @@ services:
     image: postgres:10
     mem_limit: 512mb
     restart: always
-    ports:
-      - ${POSTGRES_EXPORT_PORT}:5432
     environment:
       POSTGRES_PASSWORD:
       POSTGRES_DB:
