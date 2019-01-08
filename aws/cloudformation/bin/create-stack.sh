@@ -15,4 +15,3 @@ aws --region ${AWS_REGION} cloudformation create-stack \
         ParameterKey=AMI,ParameterValue=${AMI} \
         ParameterKey=InstanceType,ParameterValue=${INSTANCE_TYPE} \
         ParameterKey=Subnets,ParameterValue=\'${SUBNETS}\' \
-        ParameterKey=ClusterSize,ParameterValue=${CLUSTER_SIZE} \

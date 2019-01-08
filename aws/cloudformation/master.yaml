@@ -17,9 +17,6 @@ Parameters:
   InstanceType:
     Description: Which instance type should we use to build the ASG?
     Type: String
-  ClusterSize:
-    Description: How many ECS hosts do you want to initially deploy?
-    Type: Number
   Subnets:
     Description: Choose which subnets this ASG should be deployed to
     Type: List<AWS::EC2::Subnet::Id>
@@ -45,9 +42,9 @@ Resources:
     Properties:
       VPCZoneIdentifier: !Ref Subnets
       LaunchConfigurationName: !Ref LaunchConfiguration
-      MinSize: !Ref ClusterSize
-      MaxSize: !Ref ClusterSize
-      DesiredCapacity: !Ref ClusterSize
+      MinSize: 1
+      MaxSize: 1
+      DesiredCapacity: 1
       Tags:
         - Key: Name
           Value: !Sub ${EnvironmentName} ASG
@@ -97,7 +94,7 @@ Resources:
             01_start_docker_compose:
               cwd: /home/metabase
               command: git pull && git checkout master && ./start.sh -d
-              env:
+              env: # todo pass these in as parameters read from the environment or ssm
                 MB_DB_TYPE: postgres
                 MB_DB_DBNAME: metabase
                 MB_DB_PORT: 5432
