@@ -1,6 +1,5 @@
 ---
 AWS_DB_BACKUPS_S3_BUCKET: "{{ lookup('env','AWS_DB_BACKUPS_S3_BUCKET') }}"
-MB_DB_HOST: "{{ lookup('env','MB_DB_HOST') }}"
 MB_DB_USER: "{{ lookup('env','MB_DB_USER') }}"
 MB_DB_PASS: "{{ lookup('env','MB_DB_PASS') }}"
 MB_DB_PORT: "{{ lookup('env','MB_DB_PORT') }}"

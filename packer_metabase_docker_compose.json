@@ -5,7 +5,6 @@
     "AWS_VPC_ID": "{{env `AWS_VPC_ID`}}",
     "AWS_SUBNET_ID": "{{env `AWS_SUBNET_ID`}}",
     "AWS_DB_BACKUPS_S3_BUCKET": "{{env `AWS_DB_BACKUPS_S3_BUCKET`}}",
-    "MB_DB_HOST": "{{env `MB_DB_HOST`}}",
     "MB_DB_USER": "{{env `MB_DB_USER`}}",
     "MB_DB_PASS": "{{env `MB_DB_PASS`}}",
     "MB_DB_PORT": "{{env `MB_DB_PORT`}}",
@@ -43,7 +42,6 @@
       "ansible_env_vars": [
         "ANSIBLE_HOST_KEY_CHECKING=False",
         "AWS_DB_BACKUPS_S3_BUCKET={{user `AWS_DB_BACKUPS_S3_BUCKET`}}",
-        "MB_DB_HOST={{user `MB_DB_HOST`}}",
         "MB_DB_USER={{user `MB_DB_USER`}}",
         "MB_DB_PASS={{user `MB_DB_PASS`}}",
         "MB_DB_PORT={{user `MB_DB_PORT`}}",
