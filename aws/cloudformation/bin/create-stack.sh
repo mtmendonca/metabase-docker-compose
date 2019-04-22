@@ -11,6 +11,7 @@ aws --region ${AWS_REGION} cloudformation create-stack \
     --parameters \
         ParameterKey=EnvironmentName,ParameterValue=${ENVIRONMENT_NAME} \
         ParameterKey=VPC,ParameterValue=${VPC} \
+        ParameterKey=ClusterSize,ParameterValue=${CLUSTER_SIZE} \
         ParameterKey=KeyName,ParameterValue=${KEY_NAME} \
         ParameterKey=AMI,ParameterValue=${AMI} \
         ParameterKey=InstanceType,ParameterValue=${INSTANCE_TYPE} \

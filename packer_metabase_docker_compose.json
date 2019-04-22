@@ -3,14 +3,20 @@
     "AWS_REGION": "{{env `AWS_REGION`}}",
     "AWS_SOURCE_AMI": "{{env `AWS_SOURCE_AMI`}}",
     "AWS_VPC_ID": "{{env `AWS_VPC_ID`}}",
-    "AWS_SUBNET_ID": "{{env `AWS_SUBNET_ID`}}"
+    "AWS_SUBNET_ID": "{{env `AWS_SUBNET_ID`}}",
+    "AWS_DB_BACKUPS_S3_BUCKET": "{{env `AWS_DB_BACKUPS_S3_BUCKET`}}",
+    "MB_DB_HOST": "{{env `MB_DB_HOST`}}",
+    "MB_DB_USER": "{{env `MB_DB_USER`}}",
+    "MB_DB_PASS": "{{env `MB_DB_PASS`}}",
+    "MB_DB_PORT": "{{env `MB_DB_PORT`}}",
+    "MB_DB_DBNAME": "{{env `MB_DB_DBNAME`}}"
   },
   "builders": [
     {
       "type": "amazon-ebs",
       "region": "{{user `AWS_REGION`}}",
       "source_ami": "{{user `AWS_SOURCE_AMI`}}",
-      "instance_type": "m4.large",
+      "instance_type": "t3.small",
       "ssh_username": "ec2-user",
       "ami_name": "metabase-docker-compose-{{timestamp}}",
       "spot_price": 0.1,
@@ -34,7 +40,15 @@
       "playbook_file": "ansible/site.yaml",
       "groups": ["metabase-docker-compose"],
       "sftp_command": "/usr/libexec/openssh/sftp-server",
-      "ansible_env_vars": ["ANSIBLE_HOST_KEY_CHECKING=False"]
+      "ansible_env_vars": [
+        "ANSIBLE_HOST_KEY_CHECKING=False",
+        "AWS_DB_BACKUPS_S3_BUCKET={{user `AWS_DB_BACKUPS_S3_BUCKET`}}",
+        "MB_DB_HOST={{user `MB_DB_HOST`}}",
+        "MB_DB_USER={{user `MB_DB_USER`}}",
+        "MB_DB_PASS={{user `MB_DB_PASS`}}",
+        "MB_DB_PORT={{user `MB_DB_PORT`}}",
+        "MB_DB_DBNAME={{user `MB_DB_DBNAME`}}"
+      ]
     }
   ]
 }
